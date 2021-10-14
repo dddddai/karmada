@@ -167,7 +167,7 @@ func setupControllers(mgr controllerruntime.Manager, opts *options.Options, stop
 	clusterStatusController := &status.ClusterStatusController{
 		Client:                            mgr.GetClient(),
 		KubeClient:                        kubeclientset.NewForConfigOrDie(mgr.GetConfig()),
-		EventRecorder:                     mgr.GetEventRecorderFor(status.ControllerName),
+		EventRecorder:                     mgr.GetEventRecorderFor(status.ClusterStatusControllerName),
 		PredicateFunc:                     clusterPredicateFunc,
 		InformerManager:                   informermanager.GetInstance(),
 		StopChan:                          stopChan,
@@ -210,6 +210,16 @@ func setupControllers(mgr controllerruntime.Manager, opts *options.Options, stop
 		klog.Fatalf("Failed to setup binding controller: %v", err)
 	}
 
+	bindingStatusController := &status.BindingStatusController{
+		Client:        mgr.GetClient(),
+		DynamicClient: dynamicClientSet,
+		EventRecorder: mgr.GetEventRecorderFor(status.BindingStatusControllerName),
+		RESTMapper:    mgr.GetRESTMapper(),
+	}
+	if err := bindingStatusController.SetupWithManager(mgr); err != nil {
+		klog.Fatalf("Failed to setup binding status controller: %v", err)
+	}
+
 	clusterResourceBindingController := &binding.ClusterResourceBindingController{
 		Client:          mgr.GetClient(),
 		DynamicClient:   dynamicClientSet,
@@ -219,6 +229,16 @@ func setupControllers(mgr controllerruntime.Manager, opts *options.Options, stop
 	}
 	if err := clusterResourceBindingController.SetupWithManager(mgr); err != nil {
 		klog.Fatalf("Failed to setup cluster resource binding controller: %v", err)
+	}
+
+	clusterResourceBindingStatusController := &status.ClusterResourceBindingStatusController{
+		Client:        mgr.GetClient(),
+		DynamicClient: dynamicClientSet,
+		EventRecorder: mgr.GetEventRecorderFor(status.ClusterResourceBindingStatusControllerName),
+		RESTMapper:    mgr.GetRESTMapper(),
+	}
+	if err := clusterResourceBindingStatusController.SetupWithManager(mgr); err != nil {
+		klog.Fatalf("Failed to setup cluster resource binding status controller: %v", err)
 	}
 
 	executionController := &execution.Controller{

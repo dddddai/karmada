@@ -99,7 +99,7 @@ func setupControllers(mgr controllerruntime.Manager, opts *options.Options, stop
 	clusterStatusController := &status.ClusterStatusController{
 		Client:                            mgr.GetClient(),
 		KubeClient:                        kubeclientset.NewForConfigOrDie(mgr.GetConfig()),
-		EventRecorder:                     mgr.GetEventRecorderFor(status.ControllerName),
+		EventRecorder:                     mgr.GetEventRecorderFor(status.ClusterStatusControllerName),
 		PredicateFunc:                     helper.NewClusterPredicateOnAgent(opts.ClusterName),
 		InformerManager:                   informermanager.GetInstance(),
 		StopChan:                          stopChan,

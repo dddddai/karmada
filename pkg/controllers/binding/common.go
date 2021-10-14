@@ -28,11 +28,11 @@ const (
 	eventReasonCleanupWorkFailed      = "CleanupWorkFailed"
 	eventReasonSyncWorkFailed         = "SyncWorkFailed"
 	eventReasonSyncWorkSucceed        = "SyncWorkSucceed"
-	eventReasonAggregateStatusFailed  = "AggregateStatusFailed"
-	eventReasonAggregateStatusSucceed = "AggregateStatusSucceed"
+	EventReasonAggregateStatusFailed  = "AggregateStatusFailed"
+	EventReasonAggregateStatusSucceed = "AggregateStatusSucceed"
 )
 
-var workPredicateFn = builder.WithPredicates(predicate.Funcs{
+var WorkPredicateFn = builder.WithPredicates(predicate.Funcs{
 	CreateFunc: func(e event.CreateEvent) bool {
 		return false
 	},

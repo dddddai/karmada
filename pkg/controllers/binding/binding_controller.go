@@ -124,17 +124,6 @@ func (c *ResourceBindingController) syncBinding(binding *workv1alpha2.ResourceBi
 	klog.V(4).Infof(msg)
 	c.EventRecorder.Event(binding, corev1.EventTypeNormal, eventReasonSyncWorkSucceed, msg)
 
-	err = helper.AggregateResourceBindingWorkStatus(c.Client, binding, workload)
-	if err != nil {
-		klog.Errorf("Failed to aggregate workStatuses to resourceBinding(%s/%s). Error: %v.",
-			binding.GetNamespace(), binding.GetName(), err)
-		c.EventRecorder.Event(binding, corev1.EventTypeWarning, eventReasonAggregateStatusFailed, err.Error())
-		return controllerruntime.Result{Requeue: true}, err
-	}
-	msg = fmt.Sprintf("Update resourceBinding(%s/%s) with AggregatedStatus successfully.", binding.Namespace, binding.Name)
-	klog.V(4).Infof(msg)
-	c.EventRecorder.Event(binding, corev1.EventTypeNormal, eventReasonAggregateStatusSucceed, msg)
-
 	return controllerruntime.Result{}, nil
 }
 
@@ -146,25 +135,25 @@ func (c *ResourceBindingController) SetupWithManager(mgr controllerruntime.Manag
 
 			// TODO: Delete this logic in the next release to prevent incompatibility when upgrading the current release (v0.10.0).
 			labels := a.GetLabels()
-			crNamespace, namespaceExist := labels[workv1alpha2.ResourceBindingNamespaceLabel]
-			crName, nameExist := labels[workv1alpha2.ResourceBindingNameLabel]
+			rbNamespace, namespaceExist := labels[workv1alpha2.ResourceBindingNamespaceLabel]
+			rbName, nameExist := labels[workv1alpha2.ResourceBindingNameLabel]
 			if namespaceExist && nameExist {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
-						Namespace: crNamespace,
-						Name:      crName,
+						Namespace: rbNamespace,
+						Name:      rbName,
 					},
 				})
 			}
 
 			annotations := a.GetAnnotations()
-			crNamespace, namespaceExist = annotations[workv1alpha2.ResourceBindingNamespaceLabel]
-			crName, nameExist = annotations[workv1alpha2.ResourceBindingNameLabel]
+			rbNamespace, namespaceExist = annotations[workv1alpha2.ResourceBindingNamespaceLabel]
+			rbName, nameExist = annotations[workv1alpha2.ResourceBindingNameLabel]
 			if namespaceExist && nameExist {
 				requests = append(requests, reconcile.Request{
 					NamespacedName: types.NamespacedName{
-						Namespace: crNamespace,
-						Name:      crName,
+						Namespace: rbNamespace,
+						Name:      rbName,
 					},
 				})
 			}
@@ -173,7 +162,7 @@ func (c *ResourceBindingController) SetupWithManager(mgr controllerruntime.Manag
 		})
 
 	return controllerruntime.NewControllerManagedBy(mgr).For(&workv1alpha2.ResourceBinding{}).
-		Watches(&source.Kind{Type: &workv1alpha1.Work{}}, handler.EnqueueRequestsFromMapFunc(workFn), workPredicateFn).
+		Watches(&source.Kind{Type: &workv1alpha1.Work{}}, handler.EnqueueRequestsFromMapFunc(workFn), WorkPredicateFn).
 		Watches(&source.Kind{Type: &policyv1alpha1.OverridePolicy{}}, handler.EnqueueRequestsFromMapFunc(c.newOverridePolicyFunc())).
 		Watches(&source.Kind{Type: &policyv1alpha1.ClusterOverridePolicy{}}, handler.EnqueueRequestsFromMapFunc(c.newOverridePolicyFunc())).
 		Watches(&source.Kind{Type: &policyv1alpha1.ReplicaSchedulingPolicy{}}, handler.EnqueueRequestsFromMapFunc(c.newReplicaSchedulingPolicyFunc())).

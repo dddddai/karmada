@@ -34,14 +34,14 @@ import (
 )
 
 const (
-	// ControllerName is the controller name that will be used when reporting events.
-	ControllerName            = "cluster-status-controller"
-	clusterReady              = "ClusterReady"
-	clusterHealthy            = "cluster is reachable and health endpoint responded with ok"
-	clusterNotReady           = "ClusterNotReady"
-	clusterUnhealthy          = "cluster is reachable but health endpoint responded without ok"
-	clusterNotReachableReason = "ClusterNotReachable"
-	clusterNotReachableMsg    = "cluster is not reachable"
+	// ClusterStatusControllerName is the controller name that will be used when reporting events.
+	ClusterStatusControllerName = "cluster-status-controller"
+	clusterReady                = "ClusterReady"
+	clusterHealthy              = "cluster is reachable and health endpoint responded with ok"
+	clusterNotReady             = "ClusterNotReady"
+	clusterUnhealthy            = "cluster is reachable but health endpoint responded without ok"
+	clusterNotReachableReason   = "ClusterNotReachable"
+	clusterNotReachableMsg      = "cluster is not reachable"
 	// clusterStatusRetryInterval specifies the interval between two retries.
 	clusterStatusRetryInterval = 500 * time.Millisecond
 	// clusterStatusRetryTimeout specifies the maximum time to wait for cluster status.
