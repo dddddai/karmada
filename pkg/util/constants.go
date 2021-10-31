@@ -116,4 +116,6 @@ const (
 const (
 	// NamespaceKarmadaSystem is the karmada system namespace.
 	NamespaceKarmadaSystem = "karmada-system"
+	// KarmadaHost is the cluster name of karmada host
+	KarmadaHost = "karmada-host"
 )
