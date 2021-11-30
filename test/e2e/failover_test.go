@@ -35,7 +35,7 @@ var _ = ginkgo.Describe("failover testing", func() {
 		minGroups := 1
 		numOfFailedClusters := 1
 
-		// set MaxGroups=MinGroups=1, label is location=CHN.
+		// set MaxGroups=MinGroups=1, label is sync-mode=Push.
 		policy := testhelper.NewPropagationPolicy(policyNamespace, policyName, []policyv1alpha1.ResourceSelector{
 			{
 				APIVersion: deployment.APIVersion,
