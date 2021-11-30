@@ -22,7 +22,7 @@ import (
 type ScheduleAlgorithm interface {
 	Schedule(context.Context, *policyv1alpha1.Placement, *workv1alpha2.ResourceBindingSpec) (scheduleResult ScheduleResult, err error)
 	ScaleSchedule(context.Context, *policyv1alpha1.Placement, *workv1alpha2.ResourceBindingSpec) (scheduleResult ScheduleResult, err error)
-	FailoverSchedule(context.Context, *policyv1alpha1.Placement, *workv1alpha2.ResourceBindingSpec) (scheduleResult ScheduleResult, err error)
+	ReSchedule(context.Context, *policyv1alpha1.Placement, *workv1alpha2.ResourceBindingSpec) (scheduleResult ScheduleResult, err error)
 }
 
 // ScheduleResult includes the clusters selected.
@@ -292,7 +292,7 @@ func (g *genericScheduler) assignScaleReplicas(ctx context.Context, placement *p
 	return newTargetClusters, nil
 }
 
-func (g *genericScheduler) FailoverSchedule(ctx context.Context, placement *policyv1alpha1.Placement,
+func (g *genericScheduler) ReSchedule(ctx context.Context, placement *policyv1alpha1.Placement,
 	spec *workv1alpha2.ResourceBindingSpec) (result ScheduleResult, err error) {
 	readyClusters := g.schedulerCache.Snapshot().GetReadyClusterNames()
 	totalClusters := util.ConvertToClusterNames(spec.Clusters)
