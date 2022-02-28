@@ -45,7 +45,7 @@ func divideReplicasByResource(
 			return nil, fmt.Errorf("failed to scale down: %v", err)
 		}
 		return newTargetClusters, nil
-	} else if assignedReplicas < spec.Replicas {
+	} else {
 		// We need to enlarge the replicas in terms of the previous result (if exists).
 		// First scheduling is considered as a special kind of scaling up.
 		newTargetClusters, err := scaleUpScheduleByReplicaDivisionPreference(clusters, spec, preference)
@@ -53,8 +53,6 @@ func divideReplicasByResource(
 			return nil, fmt.Errorf("failed to scaleUp: %v", err)
 		}
 		return newTargetClusters, nil
-	} else {
-		return spec.Clusters, nil
 	}
 }
 
