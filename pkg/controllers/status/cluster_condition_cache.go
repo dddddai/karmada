@@ -60,7 +60,7 @@ func (c *clusterConditionStore) thresholdAdjustedReadyCondition(cluster *cluster
 	if util.IsConditionReady(observedReadyCondition) != util.IsConditionReady(curReadyCondition) &&
 		now.Before(saved.thresholdStartTime.Add(threshold)) {
 		// retain old status until threshold exceeded to avoid network unstable problems.
-		println("dwq", "threshold", curReadyCondition)
+		println("dwq", "threshold", util.IsConditionReady(curReadyCondition))
 		return curReadyCondition
 	}
 	println("dwq", "threshold exceeded", util.IsConditionReady(observedReadyCondition))
