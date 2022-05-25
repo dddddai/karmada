@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	clusterv1alpha1 "github.com/karmada-io/karmada/pkg/apis/cluster/v1alpha1"
+	"github.com/karmada-io/karmada/pkg/util"
 )
 
 type clusterData struct {
@@ -19,6 +20,8 @@ type clusterData struct {
 
 type clusterConditionStore struct {
 	clusterDataMap sync.Map
+	// successThreshold is the duration of successes for the cluster to be considered healthy after recovery.
+	successThreshold time.Duration
 	// failureThreshold is the duration of failure for the cluster to be considered unhealthy.
 	failureThreshold time.Duration
 }
@@ -46,9 +49,16 @@ func (c *clusterConditionStore) thresholdAdjustedReadyCondition(cluster *cluster
 		}
 		c.update(cluster.Name, saved)
 	}
-	if observedReadyCondition.Status != metav1.ConditionTrue &&
-		curReadyCondition.Status == metav1.ConditionTrue &&
-		now.Before(saved.thresholdStartTime.Add(c.failureThreshold)) {
+
+	var threshold time.Duration
+	if util.IsConditionReady(observedReadyCondition) {
+		threshold = c.successThreshold
+	} else {
+		threshold = c.failureThreshold
+	}
+
+	if util.IsConditionReady(observedReadyCondition) != util.IsConditionReady(curReadyCondition) &&
+		now.Before(saved.thresholdStartTime.Add(threshold)) {
 		// retain old status until threshold exceeded to avoid network unstable problems.
 		return curReadyCondition
 	}

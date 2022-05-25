@@ -77,6 +77,8 @@ type ClusterStatusController struct {
 	ClusterLeaseRenewIntervalFraction float64
 	// ClusterLeaseControllers store clusters and their corresponding lease controllers.
 	ClusterLeaseControllers sync.Map
+	// ClusterSuccessThreshold is the duration of successes for the cluster to be considered healthy after recovery.
+	ClusterSuccessThreshold metav1.Duration
 	// ClusterFailureThreshold is the duration of failure for the cluster to be considered unhealthy.
 	ClusterFailureThreshold metav1.Duration
 	// clusterConditionCache stores the condition status of each cluster.
@@ -117,6 +119,7 @@ func (c *ClusterStatusController) Reconcile(ctx context.Context, req controllerr
 // SetupWithManager creates a controller and register to controller manager.
 func (c *ClusterStatusController) SetupWithManager(mgr controllerruntime.Manager) error {
 	c.clusterConditionCache = clusterConditionStore{
+		successThreshold: c.ClusterSuccessThreshold.Duration,
 		failureThreshold: c.ClusterFailureThreshold.Duration,
 	}
 	return controllerruntime.NewControllerManagedBy(mgr).For(&clusterv1alpha1.Cluster{}).WithEventFilter(c.PredicateFunc).WithOptions(controller.Options{
@@ -139,7 +142,7 @@ func (c *ClusterStatusController) syncClusterStatus(cluster *clusterv1alpha1.Clu
 	readyCondition := c.clusterConditionCache.thresholdAdjustedReadyCondition(cluster, &observedReadyCondition)
 
 	// cluster is offline after retry timeout, update cluster status immediately and return.
-	if !online && readyCondition.Status != metav1.ConditionTrue {
+	if !online && !util.IsConditionReady(readyCondition) {
 		klog.V(2).Infof("Cluster(%s) still offline after %s, ensuring offline is set.",
 			cluster.Name, c.ClusterFailureThreshold.Duration)
 		c.InformerManager.Stop(cluster.Name)
@@ -149,7 +152,7 @@ func (c *ClusterStatusController) syncClusterStatus(cluster *clusterv1alpha1.Clu
 	}
 
 	// skip collecting cluster status if not ready
-	if online && healthy {
+	if online && healthy && util.IsConditionReady(readyCondition) {
 		// get or create informer for pods and nodes in member cluster
 		clusterInformerManager, err := c.buildInformerForCluster(cluster)
 		if err != nil {

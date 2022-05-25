@@ -26,6 +26,11 @@ func IsClusterReady(clusterStatus *clusterv1alpha1.ClusterStatus) bool {
 	return meta.IsStatusConditionTrue(clusterStatus.Conditions, clusterv1alpha1.ClusterConditionReady)
 }
 
+// IsConditionReady tells whether the ready condition status is true.
+func IsConditionReady(readyCondition *metav1.Condition) bool {
+	return readyCondition.Status == metav1.ConditionTrue
+}
+
 // GetCluster returns the given Cluster resource
 func GetCluster(hostClient client.Client, clusterName string) (*clusterv1alpha1.Cluster, error) {
 	cluster := &clusterv1alpha1.Cluster{}
