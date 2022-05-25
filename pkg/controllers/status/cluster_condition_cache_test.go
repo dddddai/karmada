@@ -187,3 +187,112 @@ func TestThresholdAdjustedReadyCondition(t *testing.T) {
 		})
 	}
 }
+
+func TestThresholdAdjustedReadyCondition2(t *testing.T) {
+	tests := []struct {
+		online        bool
+		healthy       bool
+		expectedReady metav1.ConditionStatus
+	}{
+		{
+			// cluster is healthy now
+			online:        true,
+			healthy:       true,
+			expectedReady: metav1.ConditionTrue,
+		},
+		{
+			// cluster becomes unhealthy
+			online:        true,
+			healthy:       false,
+			expectedReady: metav1.ConditionTrue,
+		},
+		{
+			// the first retry
+			online:        false,
+			healthy:       true,
+			expectedReady: metav1.ConditionTrue,
+		},
+		{
+			// the second retry
+			online:        false,
+			healthy:       false,
+			expectedReady: metav1.ConditionTrue,
+		},
+		{
+			// the third retry
+			// cluster is still unhealthy after the threshold, set cluster status to not ready
+			online:        false,
+			healthy:       false,
+			expectedReady: metav1.ConditionFalse,
+		},
+		{
+			// cluster is still unhealthy after the threshold, set cluster status to not ready
+			online:        false,
+			healthy:       false,
+			expectedReady: metav1.ConditionFalse,
+		},
+		{
+			// cluster recoverd
+			online:        true,
+			healthy:       true,
+			expectedReady: metav1.ConditionFalse,
+		},
+		{
+			// cluster becomes unhealthy
+			online:        false,
+			healthy:       false,
+			expectedReady: metav1.ConditionFalse,
+		},
+		{
+			// cluster recoverd
+			online:        true,
+			healthy:       true,
+			expectedReady: metav1.ConditionFalse,
+		},
+		// {
+		// 	// cluster becomes unhealthy
+		// 	online:        true,
+		// 	healthy:       true,
+		// 	expectedReady: metav1.ConditionFalse,
+		// },
+		{
+			// the first retry
+			online:        true,
+			healthy:       true,
+			expectedReady: metav1.ConditionFalse,
+		},
+		{
+			// the second retry
+			online:        true,
+			healthy:       true,
+			expectedReady: metav1.ConditionFalse,
+		},
+		{
+			// the third retry
+			// cluster is still unhealthy after the threshold, set cluster status to not ready
+			online:        true,
+			healthy:       true,
+			expectedReady: metav1.ConditionTrue,
+		},
+	}
+
+	// check frequency
+	frequency := 100 * time.Millisecond
+	c := ClusterStatusController{
+		clusterConditionCache: clusterConditionStore{
+			successThreshold: 300 * time.Millisecond,
+			failureThreshold: 300 * time.Millisecond,
+		},
+	}
+	cluster := &clusterv1alpha1.Cluster{}
+
+	for i, tt := range tests {
+		readyCondition := generateReadyCondition(tt.online, tt.healthy)
+		thresholdReadyCondition := c.clusterConditionCache.thresholdAdjustedReadyCondition(cluster, &readyCondition)
+		if tt.expectedReady != thresholdReadyCondition.Status {
+			t.Errorf("retryOnFailure(%d) failed, want: %v, got: %v", i, tt.expectedReady, thresholdReadyCondition.Status)
+		}
+		meta.SetStatusCondition(&cluster.Status.Conditions, *thresholdReadyCondition)
+		time.Sleep(frequency)
+	}
+}
