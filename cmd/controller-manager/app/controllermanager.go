@@ -494,7 +494,7 @@ func setupControllers(mgr controllerruntime.Manager, opts *options.Options, stop
 			FailoverEvictionTimeout:           opts.FailoverEvictionTimeout,
 			ClusterLeaseDuration:              opts.ClusterLeaseDuration,
 			ClusterLeaseRenewIntervalFraction: opts.ClusterLeaseRenewIntervalFraction,
-			ClusterSuccessThreshold:           opts.ClusterFailureThreshold,
+			ClusterSuccessThreshold:           opts.ClusterSuccessThreshold,
 			ClusterFailureThreshold:           opts.ClusterFailureThreshold,
 			ClusterCacheSyncTimeout:           opts.ClusterCacheSyncTimeout,
 			ClusterAPIQPS:                     opts.ClusterAPIQPS,
