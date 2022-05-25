@@ -56,14 +56,17 @@ func (c *clusterConditionStore) thresholdAdjustedReadyCondition(cluster *cluster
 	} else {
 		threshold = c.failureThreshold
 	}
+	println("dwq", cluster.Name, "observed", util.IsConditionReady(observedReadyCondition))
+	println("dwq", cluster.Name, "current", util.IsConditionReady(curReadyCondition))
+	println("dwq", cluster.Name, "threshold start", saved.thresholdStartTime.String())
 
 	if util.IsConditionReady(observedReadyCondition) != util.IsConditionReady(curReadyCondition) &&
 		now.Before(saved.thresholdStartTime.Add(threshold)) {
 		// retain old status until threshold exceeded to avoid network unstable problems.
-		println("dwq", "threshold", util.IsConditionReady(curReadyCondition))
+		println("dwq", cluster.Name, "threshold", util.IsConditionReady(curReadyCondition))
 		return curReadyCondition
 	}
-	println("dwq", "threshold exceeded", util.IsConditionReady(observedReadyCondition))
+	println("dwq", cluster.Name, "threshold exceeded", util.IsConditionReady(observedReadyCondition))
 	return observedReadyCondition
 }
 
