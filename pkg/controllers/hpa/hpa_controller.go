@@ -2,6 +2,7 @@ package hpa
 
 import (
 	"context"
+	"fmt"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -47,7 +48,7 @@ func (c *HorizontalPodAutoscalerController) Reconcile(ctx context.Context, req c
 	if err := c.Client.Get(ctx, req.NamespacedName, hpa); err != nil {
 		// The resource may no longer exist, in which case we delete related works.
 		if apierrors.IsNotFound(err) {
-			if err := c.deleteWorks(names.GenerateWorkName(util.HorizontalPodAutoscalerKind, req.Name, req.Namespace)); err != nil {
+			if err := c.deleteWorks(req.Namespace, req.Name); err != nil {
 				return controllerruntime.Result{Requeue: true}, err
 			}
 			return controllerruntime.Result{}, err
@@ -87,18 +88,30 @@ func (c *HorizontalPodAutoscalerController) buildWorks(hpa *autoscalingv1.Horizo
 		return nil
 	}
 	for _, clusterName := range clusters {
-		workNamespace := names.GenerateExecutionSpaceName(clusterName)
-		workName := names.GenerateWorkName(hpaObj.GetKind(), hpaObj.GetName(), hpa.GetNamespace())
-		objectMeta := metav1.ObjectMeta{
+		workNamespace, err := names.GenerateExecutionSpaceName(clusterName)
+		if err != nil {
+			klog.Errorf("Failed to ensure Work for cluster: %s. Error: %v.", clusterName, err)
+			return err
+		}
+		workName, err := names.GenerateWorkName(context.TODO(), c.Client, c.DynamicClient, workNamespace, hpaObj, hpaObj, c.RESTMapper)
+		if err != nil {
+			klog.Errorf("Failed to generate work name for cluster: %s. Error: %v.", clusterName, err)
+			return err
+		}
+		workMeta := metav1.ObjectMeta{
 			Name:       workName,
 			Namespace:  workNamespace,
 			Finalizers: []string{util.ExecutionControllerFinalizer},
+			Labels: map[string]string{
+				util.HPANamespaceLabel: hpa.Namespace,
+				util.HPANameLabel:      hpa.Name,
+			},
 		}
 
 		util.MergeLabel(hpaObj, workv1alpha1.WorkNamespaceLabel, workNamespace)
 		util.MergeLabel(hpaObj, workv1alpha1.WorkNameLabel, workName)
 
-		if err = helper.CreateOrUpdateWork(c.Client, objectMeta, hpaObj); err != nil {
+		if err = helper.CreateOrUpdateWork(c.Client, workMeta, hpaObj); err != nil {
 			return err
 		}
 	}
@@ -135,7 +148,11 @@ func (c *HorizontalPodAutoscalerController) getTargetPlacement(objRef autoscalin
 		klog.Errorf("Failed to transform object(%s/%s): %v", namespace, objRef.Name, err)
 		return nil, err
 	}
-	bindingName := names.GenerateBindingName(unstructuredWorkLoad.GetKind(), unstructuredWorkLoad.GetName())
+	bindingName, err := names.GenerateBindingName(context.TODO(), c.Client, c.DynamicClient, unstructuredWorkLoad, c.RESTMapper)
+	if err != nil {
+		klog.Errorf("Failed to generate binding name for (%s/%s): %v", namespace, objRef.Name, err)
+		return nil, err
+	}
 	binding := &workv1alpha2.ResourceBinding{}
 	namespacedName := types.NamespacedName{
 		Namespace: namespace,
@@ -143,6 +160,9 @@ func (c *HorizontalPodAutoscalerController) getTargetPlacement(objRef autoscalin
 	}
 	if err := c.Client.Get(context.TODO(), namespacedName, binding); err != nil {
 		return nil, err
+	}
+	if names.BindingNameCollision(binding, workload.(metav1.Object)) {
+		return nil, fmt.Errorf("binding name collision")
 	}
 	return util.GetBindingClusterNames(&binding.Spec), nil
 }
@@ -152,21 +172,22 @@ func (c *HorizontalPodAutoscalerController) SetupWithManager(mgr controllerrunti
 	return controllerruntime.NewControllerManagedBy(mgr).For(&autoscalingv1.HorizontalPodAutoscaler{}).Complete(c)
 }
 
-func (c *HorizontalPodAutoscalerController) deleteWorks(workName string) error {
+func (c *HorizontalPodAutoscalerController) deleteWorks(namespace, name string) error {
 	workList := &workv1alpha1.WorkList{}
-	var errs []error
-	if err := c.List(context.TODO(), workList); err != nil {
-		klog.Errorf("Failed to list works: %v.", err)
+	if err := c.List(context.TODO(), workList, client.MatchingLabels{
+		util.HPANamespaceLabel: namespace,
+		util.HPANameLabel:      name,
+	}); err != nil {
+		klog.Errorf("Failed to list works, err: %v", err)
 		return err
 	}
 
+	var errs []error
 	for i := range workList.Items {
 		work := &workList.Items[i]
-		if workName == work.Name {
-			if err := c.Client.Delete(context.TODO(), work); err != nil && !apierrors.IsNotFound(err) {
-				klog.Errorf("Failed to delete work %s/%s: %v.", work.Namespace, work.Name, err)
-				errs = append(errs, err)
-			}
+		if err := c.Delete(context.TODO(), work); err != nil && !apierrors.IsNotFound(err) {
+			klog.Errorf("Failed to delete work(%s): %v", klog.KObj(work).String(), err)
+			errs = append(errs, err)
 		}
 	}
 	return utilerrors.NewAggregate(errs)
