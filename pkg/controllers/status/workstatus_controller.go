@@ -255,10 +255,7 @@ func (c *WorkStatusController) syncWorkStatus(key util.QueueKey) error {
 }
 
 func (c *WorkStatusController) handleDeleteEvent(key federatedKeyWrapper) error {
-	executionSpace, err := names.GenerateExecutionSpaceName(key.Cluster)
-	if err != nil {
-		return err
-	}
+	executionSpace := names.GenerateExecutionSpaceName(key.Cluster)
 
 	work := &workv1alpha1.Work{}
 	if err := c.Client.Get(context.TODO(), client.ObjectKey{Namespace: executionSpace, Name: key.workName}, work); err != nil {

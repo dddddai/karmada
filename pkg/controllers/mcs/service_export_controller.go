@@ -391,10 +391,7 @@ func (c *ServiceExportController) reportEndpointSliceWithEndpointSliceCreateOrUp
 
 // reportEndpointSlice report EndPointSlice objects to control-plane.
 func (c *ServiceExportController) reportEndpointSlice(endpointSlice *unstructured.Unstructured, clusterName string) error {
-	executionSpace, err := names.GenerateExecutionSpaceName(clusterName)
-	if err != nil {
-		return err
-	}
+	executionSpace := names.GenerateExecutionSpaceName(clusterName)
 
 	dynamicClient, err := c.ClusterDynamicClientSetFunc(clusterName, c.Client)
 	if err != nil {
@@ -451,10 +448,7 @@ func cleanupWorkWithServiceExportDelete(c client.Client, serviceExportKey keys.F
 }
 
 func (c *ServiceExportController) cleanupWorkWithEndpointSliceDelete(endpointSliceKey federatedKeyWrapper) error {
-	executionSpace, err := names.GenerateExecutionSpaceName(endpointSliceKey.Cluster)
-	if err != nil {
-		return err
-	}
+	executionSpace := names.GenerateExecutionSpaceName(endpointSliceKey.Cluster)
 	dynamicClient, err := c.ClusterDynamicClientSetFunc(endpointSliceKey.Cluster, c.Client)
 	if err != nil {
 		return err
